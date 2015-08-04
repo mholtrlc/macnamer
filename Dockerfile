@@ -44,6 +44,4 @@ RUN apt-get update && apt-get install -y python-setuptools python-dev  libffi-de
 
 EXPOSE 8000
 
-VOLUME ["$APP_DIR/macnamer/settings.py", "$APP_DIR/db"]
-
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
