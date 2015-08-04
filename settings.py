@@ -194,7 +194,7 @@ INSTALLED_APPS = (
 
 #LDAP LOGGING
 import logging, logging.handlers
-logfile = "/tmp/django-ldap-debug.log"
+logfile = "/home/app/macnamer/django-ldap-debug.log"
 my_logger = logging.getLogger('django_auth_ldap')
 my_logger.setLevel(logging.DEBUG)
 
