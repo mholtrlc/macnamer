@@ -10,7 +10,7 @@ ENV APP_DIR /home/app/macnamer
 ENV TZ Europe/London
 ENV DOCKER_MACNAMER_TZ Europe/London
 ENV DOCKER_MACNAMER_ADMINS Docker User, docker@localhost
-ENV DOCKER_MACNAMER_LANG en_GB
+ENV DOCKER_MACNAMER_LANG en_US
 
 # Use baseimage-docker's init process.
 CMD ["/sbin/my_init"]
@@ -38,6 +38,9 @@ ADD django/management/ $APP_DIR/namer/management/
 ADD run.sh /etc/my_init.d/run.sh
 RUN rm -f /etc/service/nginx/down
 RUN rm -f /etc/nginx/sites-enabled/default
+
+RUN apt-get update && apt-get install -y python-setuptools python-dev  libffi-dev libssl-dev libldap2-dev libsasl2-dev \
+&& easy_install pip && pip install requests pyOpenSSL ndg-httpsclient pyasn1 django-auth-ldap
 
 EXPOSE 8000
 

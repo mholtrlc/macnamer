@@ -1,7 +1,72 @@
 # Django settings for Macnamer
 from settings_import import ADMINS, TIME_ZONE, LANGUAGE_CODE, ALLOWED_HOSTS
 import os
+import ldap
+from django_auth_ldap.config import LDAPSearch, GroupOfNamesType, PosixGroupType
 # Django settings for macnamer project.
+
+
+#LDAP CONFIGURATION
+
+# ...connecting to ldap server (local environment uses IP)
+AUTH_LDAP_GLOBAL_OPTIONS = {
+    ldap.OPT_X_TLS_REQUIRE_CERT: False,
+    ldap.OPT_REFERRALS: False
+}
+AUTH_LDAP_SERVER_URI = "ldap://ldap"
+
+# ...account to enter into ldap server (anonymous is not always allowed)
+AUTH_LDAP_BIND_DN = "cn=admin,dc=ldap,dc=reallifechurch,dc=org"
+AUTH_LDAP_BIND_PASSWORD = os.environ['LDAP_PASSWORD']
+
+# ...node where to start to search users
+AUTH_LDAP_USER_SEARCH = LDAPSearch("ou=people,dc=ldap,dc=reallifechurch,dc=org",
+                                   ldap.SCOPE_SUBTREE,  # allow searching from current node to all nodes below
+                                   "(uid=%(user)s)"
+                                   #"(objectClass=posixAccount)"
+                                   #"(objectClass=simpleSecurityObject)"
+)
+
+# ...path where to start to search groups
+AUTH_LDAP_GROUP_SEARCH = LDAPSearch("ou=group,dc=ldap,dc=reallifechurch,dc=org",
+                                    ldap.SCOPE_SUBTREE,  # allow searching from current node to all nodes below
+                                    "(objectClass=posixGroup)"  # type of object
+)
+AUTH_LDAP_GROUP_TYPE = PosixGroupType(name_attr="cn")  # a posixGroup is identified by the keyword "cn" into ldap server
+
+# ...simple group restrictions
+AUTH_LDAP_REQUIRE_GROUP = "cn=macnamer_admin,ou=group,dc=ldap,dc=reallifechurch,dc=org"
+
+
+# ...populate the Django user from the LDAP directory.
+AUTH_LDAP_USER_ATTR_MAP = {
+    "first_name": "givenName",
+    "last_name": "sn",
+    "email": "mail",
+    "username": "uid",
+    "password": "userPassword",
+}
+
+AUTH_LDAP_USER_FLAGS_BY_GROUP = {
+    'is_active': 'cn=macnamer_admin,ou=group,dc=ldap,dc=reallifechurch,dc=org',
+    'is_staff': 'cn=macnamer_admin,ou=group,dc=ldap,dc=reallifechurch,dc=org',
+    'is_superuser': 'cn=macnamer_admin,ou=group,dc=ldap,dc=reallifechurch,dc=org',
+}
+
+# Keep ModelBackend around for per-user permissions and maybe a local
+# superuser.
+AUTHENTICATION_BACKENDS = (
+    'django_auth_ldap.backend.LDAPBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+import logging
+logger = logging.getLogger('django_auth_ldap')
+logger.addHandler(logging.StreamHandler())
+logger.setLevel(logging.DEBUG)
+
+#End LDAP CONFIGURATION
+
 
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.pardir))
 
@@ -127,31 +192,11 @@ INSTALLED_APPS = (
     'bootstrap_toolkit',
 )
 
-# A sample logging configuration. The only tangible logging
-# performed by this configuration is to send an email to
-# the site admins on every HTTP 500 error when DEBUG=False.
-# See http://docs.djangoproject.com/en/dev/topics/logging for
-# more details on how to customize your logging configuration.
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
-    },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        }
-    },
-    'loggers': {
-        'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-    }
-}
+#LDAP LOGGING
+import logging, logging.handlers
+logfile = "/tmp/django-ldap-debug.log"
+my_logger = logging.getLogger('django_auth_ldap')
+my_logger.setLevel(logging.DEBUG)
+
+handler = logging.handlers.RotatingFileHandler(
+   logfile, maxBytes=1024 * 500, backupCount=5)
